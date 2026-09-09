@@ -97,7 +97,7 @@
                         <div class="form-group">
                             <label for="enc-title">Message Title</label>
                             <div class="input-wrapper">
-                                <input type="text" id="enc-title" class="form-input" placeholder="e.g., Bank Credentials, Secret Recipe" required style="padding-left: 16px;">
+                                <input type="text" id="enc-title" class="form-input form-input-no-icon" placeholder="e.g., Bank Credentials, Secret Recipe" required>
                             </div>
                         </div>
                         
@@ -173,22 +173,22 @@
                 <p>Paste a raw encrypted payload or select a saved message to decrypt its contents.</p>
             </header>
             
-            <div class="content-grid" style="grid-template-columns: 1fr;">
+            <div class="content-grid content-grid-single">
                 <div class="dashboard-card glass-container">
                     <h3><i class="fa-solid fa-unlock-keyhole"></i> Decryption Form</h3>
                     
                     <form id="decryptForm" onsubmit="handleDecryptRaw(event)">
                         <div class="form-group">
                             <label for="dec-ciphertext">Ciphertext (Base64)</label>
-                            <textarea id="dec-ciphertext" class="form-input" placeholder="Paste base64 ciphertext" required style="min-height: 80px; padding-left: 15px;"></textarea>
+                            <textarea id="dec-ciphertext" class="form-input form-input-no-icon" placeholder="Paste base64 ciphertext" required style="min-height: 80px;"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="dec-tag">Auth Tag (Base64)</label>
-                            <input type="text" id="dec-tag" class="form-input" placeholder="Paste base64 authentication tag" required style="padding-left: 15px;" autocomplete="one-time-code">
+                            <input type="text" id="dec-tag" class="form-input form-input-no-icon" placeholder="Paste base64 authentication tag" required autocomplete="one-time-code">
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="dec-password">Decryption Password</label>
                                 <div class="input-wrapper">
