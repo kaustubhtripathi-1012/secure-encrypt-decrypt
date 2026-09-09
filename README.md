@@ -44,7 +44,3 @@ A secure file encryption and decryption tool built with Python and PyQt6.
 2.2 Decryption
 1. **Retrieve Session Key**: The RSA-encrypted AES key is decrypted using the private key.
 2. **Verify and Decrypt**: The file content is decrypted using AES-256-GCM, and the Authentication Tag is verified to ensure integrity.
-
-## Project Structure
-- `secure_encrypt_decrypt.py`: Main application file containing the GUI and logic.
-- `README.md`: Project documentation.
