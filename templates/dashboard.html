@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Sidebar (Visible on Desktop, Top Bar on Mobile) -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Secure Shield</span>
+        </div>
+        
+        <!-- Sidebar Navigation Menu (Hidden on Mobile) -->
+        <div class="sidebar-nav-container">
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="encrypt">
+                    <button onclick="switchTab('encrypt')">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Encrypt</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="decrypt">
+                    <button onclick="switchTab('decrypt')">
+                        <i class="fa-solid fa-lock-open"></i>
+                        <span>Decrypt</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="messages">
+                    <button onclick="switchTab('messages')">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <span>Saved Messages</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="profile">
+                    <button onclick="switchTab('profile')">
+                        <i class="fa-solid fa-circle-user"></i>
+                        <span>Security Profile</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="avatar">{{ username[0] | upper }}</div>
+                <div class="username" title="{{ username }}">{{ username }}</div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout">
+                <i class="fa-solid fa-power-off"></i>
+                <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation (Visible only on Mobile) -->
+    <ul class="mobile-nav">
+        <li class="mobile-nav-item active" data-tab-mob="encrypt">
+            <button onclick="switchTab('encrypt')">
+                <i class="fa-solid fa-lock"></i>
+                <span>Encrypt</span>
+            </button>
+        </li>
+        <li class="mobile-nav-item" data-tab-mob="decrypt">
+            <button onclick="switchTab('decrypt')">
+                <i class="fa-solid fa-lock-open"></i>
+                <span>Decrypt</span>
+            </button>
+        </li>
+        <li class="mobile-nav-item" data-tab-mob="messages">
+            <button onclick="switchTab('messages')">
+                <i class="fa-solid fa-box-archive"></i>
+                <span>Saved</span>
+            </button>
+        </li>
+        <li class="mobile-nav-item" data-tab-mob="profile">
+            <button onclick="switchTab('profile')">
+                <i class="fa-solid fa-user-lock"></i>
+                <span>Profile</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        
+        <!-- ENCRYPT TAB -->
+        <section id="encrypt-tab" class="tab-content active">
+            <header class="content-header">
+                <h1>Encrypt Message</h1>
+                <p>Securely encrypt messages using authenticated AES-256-GCM.</p>
+            </header>
+            
+            <div class="content-grid">
+                <!-- Encryption Form -->
+                <div class="dashboard-card glass-container">
+                    <h3><i class="fa-solid fa-key"></i> Encryption Parameters</h3>
+                    <form id="encryptForm" onsubmit="handleEncrypt(event)">
+                        <div class="form-group">
+                            <label for="enc-title">Message Title</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="enc-title" class="form-input" placeholder="e.g., Bank Credentials, Secret Recipe" required style="padding-left: 16px;">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="enc-message">Plaintext Message</label>
+                            <textarea id="enc-message" class="form-input" placeholder="Type your confidential message here..." required></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="enc-password">Encryption Password</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="enc-password" class="form-input" placeholder="Enter custom password" required autocomplete="new-password">
+                                <i class="fa-solid fa-shield-cat"></i>
+                                <button type="button" class="toggle-password" onclick="togglePasswordVisibility('enc-password')">
+                                    <i class="fa-solid fa-eye" id="enc-password-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="enc-key">Secret Key</label>
+                            <div class="key-gen-group">
+                                <div class="input-wrapper" style="flex-grow: 1;">
+                                    <input type="text" id="enc-key" class="form-input" placeholder="Enter or generate key" required>
+                                    <i class="fa-solid fa-key"></i>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-action-sm" onclick="generateSecretKey('enc-key')">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-lock"></i> Encrypt & Save to DB
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Encryption Output -->
+                <div class="dashboard-card glass-container output-card">
+                    <h3><i class="fa-solid fa-circle-nodes"></i> Encrypted Payload</h3>
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                        The encryption results are stored in the database. You can also copy the raw encrypted payload for external transit.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Ciphertext (Encrypted Text)</label>
+                        <div class="output-value-container">
+                            <div id="out-ciphertext" class="output-value">-- Pending Input --</div>
+                            <button type="button" class="btn-copy" onclick="copyText('out-ciphertext')" title="Copy Ciphertext">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Auth Tag</label>
+                        <div class="output-value-container">
+                            <div id="out-tag" class="output-value" style="min-height: 50px;">--</div>
+                            <button type="button" class="btn-copy" onclick="copyText('out-tag')" title="Copy Tag">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DECRYPT TAB -->
+        <section id="decrypt-tab" class="tab-content">
+            <header class="content-header">
+                <h1>Decrypt Payload</h1>
+                <p>Paste a raw encrypted payload or select a saved message to decrypt its contents.</p>
+            </header>
+            
+            <div class="content-grid" style="grid-template-columns: 1fr;">
+                <div class="dashboard-card glass-container">
+                    <h3><i class="fa-solid fa-unlock-keyhole"></i> Decryption Form</h3>
+                    
+                    <form id="decryptForm" onsubmit="handleDecryptRaw(event)">
+                        <div class="form-group">
+                            <label for="dec-ciphertext">Ciphertext (Base64)</label>
+                            <textarea id="dec-ciphertext" class="form-input" placeholder="Paste base64 ciphertext" required style="min-height: 80px; padding-left: 15px;"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dec-tag">Auth Tag (Base64)</label>
+                            <input type="text" id="dec-tag" class="form-input" placeholder="Paste base64 authentication tag" required style="padding-left: 15px;" autocomplete="one-time-code">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label for="dec-password">Decryption Password</label>
+                                <div class="input-wrapper">
+                                    <input type="password" id="dec-password" class="form-input" placeholder="Enter password" required autocomplete="new-password">
+                                    <i class="fa-solid fa-lock"></i>
+                                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('dec-password')">
+                                        <i class="fa-solid fa-eye" id="dec-password-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="dec-key">Secret Key</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="dec-key" class="form-input" placeholder="Enter secret key" required>
+                                    <i class="fa-solid fa-key"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                            <i class="fa-solid fa-unlock"></i> Authenticate & Decrypt
+                        </button>
+                    </form>
+                    
+                    <div style="margin-top: 30px;">
+                        <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">Decrypted Output</label>
+                        <div class="output-value-container" style="margin-top: 8px;">
+                            <div id="dec-output" class="output-value" style="min-height: 100px; font-family: var(--font-main); color: var(--text-primary); font-size: 16px;">
+                                -- Decrypted message will appear here --
+                            </div>
+                            <button type="button" class="btn-copy" onclick="copyText('dec-output')" title="Copy Plaintext">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SAVED MESSAGES TAB -->
+        <section id="messages-tab" class="tab-content">
+            <header class="content-header">
+                <h1>Saved Messages</h1>
+                <p>View, decrypt, and manage your stored encrypted records.</p>
+            </header>
+            
+            <div class="dashboard-card glass-container">
+                <div id="messages-container" class="message-list">
+                    <!-- Loaded dynamically via JS -->
+                    <div class="no-messages">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p style="margin-top: 10px;">Loading saved messages...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROFILE TAB -->
+        <section id="profile-tab" class="tab-content">
+            <header class="content-header">
+                <h1>Security Profile</h1>
+                <p>Information about your encryption account and standard guidelines.</p>
+            </header>
+            
+            <div class="profile-card glass-container">
+                <div class="profile-header">
+                    <div class="profile-avatar">{{ username[0] | upper }}</div>
+                    <div class="profile-info">
+                        <h2>{{ username }}</h2>
+                        <p><i class="fa-solid fa-circle-check" style="color: var(--color-success);"></i> Authenticated Locally</p>
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Active Encryption Standard</span>
+                    <span class="info-value" style="color: var(--color-accent-2);">AES-256-GCM</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Key Derivation Function</span>
+                    <span class="info-value">PBKDF2-HMAC-SHA256 (100k Iterations)</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Database Type</span>
+                    <span class="info-value">SQLite 3</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Access Level</span>
+                    <span class="info-value">Confidential Storage User</span>
+                </div>
+                
+                <div style="margin-top: 30px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                    <h4 style="color: var(--text-primary); margin-bottom: 10px;"><i class="fa-solid fa-circle-info" style="color: var(--color-accent-1)"></i> Security Notice</h4>
+                    <p>
+                        Your encrypted messages are stored as AES ciphertext along with random nonces and salts. They can only be read by deriving the decryption key from the matching Password and Secret Key. If you lose either, the ciphertext cannot be cracked or recovered. Keep your secret keys safe!
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Decrypt Modal -->
+<div id="decrypt-modal" class="modal">
+    <div class="modal-card glass-container">
+        <div class="modal-header">
+            <h3 id="modal-msg-title">Decrypt Saved Message</h3>
+            <button type="button" class="btn-close" onclick="closeDecryptModal()">&times;</button>
+        </div>
+        
+        <form id="modal-decrypt-form" onsubmit="handleModalDecrypt(event)">
+            <input type="hidden" id="modal-msg-id">
+            
+            <div class="form-group">
+                <label for="modal-password">Decryption Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="modal-password" class="form-input" placeholder="Enter password" required autocomplete="new-password">
+                    <i class="fa-solid fa-lock"></i>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('modal-password')">
+                        <i class="fa-solid fa-eye" id="modal-password-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-key">Secret Key</label>
+                <div class="input-wrapper">
+                    <input type="text" id="modal-key" class="form-input" placeholder="Enter secret key" required>
+                    <i class="fa-solid fa-key"></i>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                <i class="fa-solid fa-unlock-keyhole"></i> Decrypt Contents
+            </button>
+        </form>
+        
+        <div id="modal-output-container" style="display: none; margin-top: 25px;">
+            <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">Decrypted Message</label>
+            <div class="output-value-container" style="margin-top: 8px;">
+                <div id="modal-decrypted-text" class="modal-decrypted-box"></div>
+                <button type="button" class="btn-copy" onclick="copyText('modal-decrypted-text')" title="Copy Plaintext">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

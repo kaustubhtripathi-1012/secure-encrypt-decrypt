@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card glass-container">
+        <div class="auth-logo">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h2>Create Account</h2>
+        <p class="subtitle">Secure Shield Encryption Platform</p>
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form action="{{ url_for('register') }}" method="POST" id="registerForm" onsubmit="return validateRegisterForm()">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" required autocomplete="username">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Create strong password" required autocomplete="new-password">
+                    <i class="fa-solid fa-lock"></i>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password')">
+                        <i class="fa-solid fa-eye" id="password-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Re-enter password" required autocomplete="new-password">
+                    <i class="fa-solid fa-lock-open"></i>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirm_password')">
+                        <i class="fa-solid fa-eye" id="confirm_password-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-user-check"></i> Sign Up
+            </button>
+        </form>
+        
+        <div class="auth-links">
+            Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function togglePasswordVisibility(fieldId) {
+        const input = document.getElementById(fieldId);
+        const eye = document.getElementById(fieldId + '-eye');
+        if (input.type === 'password') {
+            input.type = 'text';
+            eye.classList.remove('fa-eye');
+            eye.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            eye.classList.remove('fa-eye-slash');
+            eye.classList.add('fa-eye');
+        }
+    }
+
+    function validateRegisterForm() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return false;
+        }
+        
+        if (password.length < 6) {
+            alert("Password must be at least 6 characters long!");
+            return false;
+        }
+        
+        return true;
+    }
+</script>
+{% endblock %}

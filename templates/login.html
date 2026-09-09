@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card glass-container">
+        <div class="auth-logo">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2>Secure Shield</h2>
+        <p class="subtitle">Message Encryption & Decryption Platform</p>
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="alert alert-success">
+            <i class="fa-solid fa-circle-check"></i>
+            {{ success }}
+        </div>
+        {% endif %}
+        
+        <form action="{{ url_for('login') }}" method="POST" id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" name="username" class="form-input" placeholder="Enter username" required autocomplete="username">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+                    <i class="fa-solid fa-lock"></i>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password')">
+                        <i class="fa-solid fa-eye" id="password-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
+        </form>
+        
+        <div class="auth-links">
+            Don't have an account? <a href="{{ url_for('register') }}">Create one here</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function togglePasswordVisibility(fieldId) {
+        const input = document.getElementById(fieldId);
+        const eye = document.getElementById(fieldId + '-eye');
+        if (input.type === 'password') {
+            input.type = 'text';
+            eye.classList.remove('fa-eye');
+            eye.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            eye.classList.remove('fa-eye-slash');
+            eye.classList.add('fa-eye');
+        }
+    }
+</script>
+{% endblock %}
