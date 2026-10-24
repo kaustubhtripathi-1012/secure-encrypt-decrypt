@@ -104,12 +104,23 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="btnSignIn">
-                        <i class="fa-solid fa-right-to-bracket"></i> Sign In
-                    </button>
+                    <div style="display: flex; gap: 10px; margin-top: 12px;">
+                        <button type="submit" class="btn btn-primary" id="btnSignIn" style="flex: 1;">
+                            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="loginAsGuest()" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #fff;" title="Skip login and encrypt immediately">
+                            <i class="fa-solid fa-bolt" style="margin-right: 6px; color: #a855f7;"></i> Guest Access
+                        </button>
+                    </div>
                 </form>
 
-                <div class="auth-links">
+                <div style="margin-top: 16px; text-align: center;">
+                    <button type="button" onclick="fillAndLoginDemo()" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 13px; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer; width: 100%;">
+                        <i class="fa-solid fa-user-shield" style="color: var(--color-accent-1); margin-right: 6px;"></i> 1-Click Demo Login (<strong style="color: var(--text-primary)">admin</strong> / <strong style="color: var(--text-primary)">admin123</strong>)
+                    </button>
+                </div>
+
+                <div class="auth-links" style="margin-top: 14px;">
                     Don't have an account? <a href="javascript:void(0)" onclick="showAuthScreen('register')">Create one here</a>
                 </div>
 

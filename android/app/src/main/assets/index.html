@@ -3,27 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Secure Shield - Android Encryption Platform</title>
+    <title>Secure Shield - Message Encryption Platform</title>
     <!-- Custom Style -->
     <link rel="stylesheet" href="css/style.css">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Standalone App Enhancements */
-        :root {
-            --safe-area-top: env(safe-area-inset-top, 0px);
-            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-        }
-        body {
-            padding-top: var(--safe-area-top);
-            padding-bottom: var(--safe-area-bottom);
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        input, textarea {
-            user-select: text;
-            -webkit-user-select: text;
-        }
         .view-section {
             display: none;
             width: 100%;
@@ -35,9 +20,9 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 11.5px;
             font-weight: 600;
             background: rgba(16, 185, 129, 0.15);
             color: #10b981;
@@ -56,6 +41,26 @@
             50% { transform: scale(1.3); opacity: 1; }
             100% { transform: scale(0.9); opacity: 0.7; }
         }
+        .btn-apk-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13.5px;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            transition: var(--transition-smooth);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-apk-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -69,11 +74,11 @@
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
                 <h2>Secure Shield</h2>
-                <p class="subtitle">Android Message Encryption &amp; Decryption Platform</p>
-                <div style="text-align: center; margin-bottom: 16px;">
+                <p class="subtitle">Military-Grade Message Encryption &amp; Decryption Platform</p>
+                <div style="text-align: center; margin-bottom: 18px;">
                     <div class="connection-badge">
                         <span class="pulse-dot"></span>
-                        <span>Hardware-Accelerated AES-256-GCM</span>
+                        <span id="platformBadge">AES-256-GCM + PBKDF2 (100k Iterations)</span>
                     </div>
                 </div>
 
@@ -99,13 +104,30 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="btnSignIn">
-                        <i class="fa-solid fa-right-to-bracket"></i> Sign In
-                    </button>
+                    <div style="display: flex; gap: 10px; margin-top: 12px;">
+                        <button type="submit" class="btn btn-primary" id="btnSignIn" style="flex: 1;">
+                            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="loginAsGuest()" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #fff;" title="Skip login and encrypt immediately">
+                            <i class="fa-solid fa-bolt" style="margin-right: 6px; color: #a855f7;"></i> Guest Access
+                        </button>
+                    </div>
                 </form>
 
-                <div class="auth-links">
+                <div style="margin-top: 16px; text-align: center;">
+                    <button type="button" onclick="fillAndLoginDemo()" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 13px; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer; width: 100%;">
+                        <i class="fa-solid fa-user-shield" style="color: var(--color-accent-1); margin-right: 6px;"></i> 1-Click Demo Login (<strong style="color: var(--text-primary)">admin</strong> / <strong style="color: var(--text-primary)">admin123</strong>)
+                    </button>
+                </div>
+
+                <div class="auth-links" style="margin-top: 14px;">
                     Don't have an account? <a href="javascript:void(0)" onclick="showAuthScreen('register')">Create one here</a>
+                </div>
+
+                <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--glass-border); text-align: center;">
+                    <a href="SecureShield-v1.0.apk" download class="btn-apk-download">
+                        <i class="fa-brands fa-android"></i> Download Android APK
+                    </a>
                 </div>
             </div>
         </div>
@@ -250,8 +272,17 @@
                 <!-- ENCRYPT TAB -->
                 <section id="encrypt-tab" class="tab-content active">
                     <header class="content-header">
-                        <h1>Encrypt Message</h1>
-                        <p>Hardware-accelerated AES-256-GCM authenticated encryption.</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h1>Encrypt Message</h1>
+                                <p>Hardware-accelerated AES-256-GCM authenticated encryption.</p>
+                            </div>
+                            <div>
+                                <a href="SecureShield-v1.0.apk" download class="btn-apk-download">
+                                    <i class="fa-brands fa-android"></i> Get Android APK
+                                </a>
+                            </div>
+                        </div>
                     </header>
 
                     <div class="content-grid">
@@ -296,7 +327,7 @@
                                 </div>
 
                                 <button type="submit" class="btn btn-primary" id="btnEncrypt">
-                                    <i class="fa-solid fa-lock"></i> Encrypt &amp; Save to DB
+                                    <i class="fa-solid fa-lock"></i> Encrypt &amp; Save
                                 </button>
                             </form>
                         </div>
@@ -305,7 +336,7 @@
                         <div class="dashboard-card glass-container output-card">
                             <h3><i class="fa-solid fa-circle-nodes"></i> Encrypted Payload</h3>
                             <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-                                Encrypted using AES-256-GCM. Stored in local SQLite database. You can copy the payload below to send or backup.
+                                Encrypted using AES-256-GCM. Stored in local database. You can copy the payload below to send or backup.
                             </p>
 
                             <div class="form-group">
@@ -397,12 +428,11 @@
                 <section id="messages-tab" class="tab-content">
                     <header class="content-header">
                         <h1>Saved Messages</h1>
-                        <p>Encrypted records stored in your device's private SQLite database.</p>
+                        <p>Encrypted records stored securely in your browser/device database.</p>
                     </header>
 
                     <div class="dashboard-card glass-container">
                         <div id="messages-container" class="message-list">
-                            <!-- Populated dynamically via JS -->
                             <div class="no-messages">
                                 <i class="fa-solid fa-spinner fa-spin"></i>
                                 <p style="margin-top: 10px;">Loading saved messages...</p>
@@ -423,7 +453,7 @@
                             <div class="profile-avatar" id="profileAvatar">U</div>
                             <div class="profile-info">
                                 <h2 id="profileUsername">User</h2>
-                                <p><i class="fa-solid fa-circle-check" style="color: var(--color-success);"></i> Authenticated Locally on Android</p>
+                                <p><i class="fa-solid fa-circle-check" style="color: var(--color-success);"></i> Authenticated Locally</p>
                             </div>
                         </div>
 
@@ -438,18 +468,22 @@
                         </div>
 
                         <div class="info-row">
-                            <span class="info-label">Database Type</span>
-                            <span class="info-value">SQLite 3 (Android Native)</span>
+                            <span class="info-label">Database Engine</span>
+                            <span class="info-value">Encrypted Local Database (Browser / SQLite)</span>
                         </div>
 
                         <div class="info-row">
-                            <span class="info-label">Application Mode</span>
-                            <span class="info-value" style="color: var(--color-success);">Standalone Offline APK</span>
+                            <span class="info-label">Deployment Platform</span>
+                            <span class="info-value" id="profileDevice">Web Browser / GitHub Pages</span>
                         </div>
 
                         <div class="info-row">
-                            <span class="info-label">Device Diagnostics</span>
-                            <span class="info-value" id="profileDevice">Android System</span>
+                            <span class="info-label">Android Mobile App</span>
+                            <span class="info-value">
+                                <a href="SecureShield-v1.0.apk" download style="color: #10b981; font-weight: 600; text-decoration: underline;">
+                                    <i class="fa-brands fa-android"></i> Download SecureShield-v1.0.apk
+                                </a>
+                            </span>
                         </div>
 
                         <div style="margin-top: 30px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">

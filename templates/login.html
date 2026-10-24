@@ -43,12 +43,23 @@
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-right-to-bracket"></i> Sign In
-            </button>
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                </button>
+                <a href="{{ url_for('guest') }}" class="btn btn-secondary" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4);" title="Skip login and encrypt immediately">
+                    <i class="fa-solid fa-bolt" style="margin-right: 6px;"></i> Guest Access
+                </a>
+            </div>
         </form>
         
-        <div class="auth-links">
+        <div style="margin-top: 15px; text-align: center;">
+            <button type="button" onclick="fillDemo()" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 13px; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;">
+                <i class="fa-solid fa-user-shield" style="color: var(--color-accent-1); margin-right: 5px;"></i> Use Demo Account (admin / admin123)
+            </button>
+        </div>
+        
+        <div class="auth-links" style="margin-top: 16px;">
             Don't have an account? <a href="{{ url_for('register') }}">Create one here</a>
         </div>
     </div>
@@ -69,6 +80,10 @@
             eye.classList.remove('fa-eye-slash');
             eye.classList.add('fa-eye');
         }
+    function fillDemo() {
+        document.getElementById('username').value = 'admin';
+        document.getElementById('password').value = 'admin123';
+        document.getElementById('loginForm').submit();
     }
 </script>
 {% endblock %}

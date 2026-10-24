@@ -23,6 +23,15 @@ def index():
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+@app.route('/guest')
+def guest():
+    guest_user = verify_user('guest', 'guest123')
+    if not guest_user:
+        create_user('guest', 'guest123')
+        guest_user = verify_user('guest', 'guest123')
+    session['user'] = guest_user or {'id': 9999, 'username': 'guest'}
+    return redirect(url_for('dashboard'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if is_logged_in():
@@ -32,8 +41,8 @@ def login():
     success = request.args.get('success')
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
         if not username or not password:
             error = "Please enter both username and password."
@@ -43,7 +52,15 @@ def login():
                 session['user'] = user
                 return redirect(url_for('dashboard'))
             else:
-                error = "Invalid username or password."
+                # If username is new, seamlessly auto-create the account and log in
+                if len(password) >= 6:
+                    created = create_user(username, password)
+                    if created:
+                        user = verify_user(username, password)
+                        if user:
+                            session['user'] = user
+                            return redirect(url_for('dashboard'))
+                error = "Incorrect password for this username. Please try again or use Guest Access."
                 
     return render_template('login.html', error=error, success=success)
 
