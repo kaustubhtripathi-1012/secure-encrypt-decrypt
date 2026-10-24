@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Secure Shield - Message Encryption Platform</title>
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .view-section {
+            display: none;
+            width: 100%;
+        }
+        .view-section.active {
+            display: block;
+        }
+        .connection-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            margin-top: 6px;
+        }
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+        .btn-apk-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13.5px;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            transition: var(--transition-smooth);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-apk-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= AUTH VIEW (LOGIN / REGISTER) ================= -->
+    <div id="authView" class="view-section active">
+        <!-- LOGIN SCREEN -->
+        <div id="loginScreen" class="auth-wrapper" style="min-height: 100vh; min-height: 100dvh;">
+            <div class="auth-card glass-container">
+                <div class="auth-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2>Secure Shield</h2>
+                <p class="subtitle">Military-Grade Message Encryption &amp; Decryption Platform</p>
+                <div style="text-align: center; margin-bottom: 18px;">
+                    <div class="connection-badge">
+                        <span class="pulse-dot"></span>
+                        <span id="platformBadge">AES-256-GCM + PBKDF2 (100k Iterations)</span>
+                    </div>
+                </div>
+
+                <div id="loginAlert" class="alert alert-danger" style="display: none;"></div>
+
+                <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="login-username" class="form-input" placeholder="Enter username" required autocomplete="username">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="login-password" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+                            <i class="fa-solid fa-lock"></i>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('login-password')">
+                                <i class="fa-solid fa-eye" id="login-password-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btnSignIn">
+                        <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    Don't have an account? <a href="javascript:void(0)" onclick="showAuthScreen('register')">Create one here</a>
+                </div>
+
+                <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--glass-border); text-align: center;">
+                    <a href="SecureShield-v1.0.apk" download class="btn-apk-download">
+                        <i class="fa-brands fa-android"></i> Download Android APK
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGISTER SCREEN -->
+        <div id="registerScreen" class="auth-wrapper" style="min-height: 100vh; min-height: 100dvh; display: none;">
+            <div class="auth-card glass-container">
+                <div class="auth-logo">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <h2>Create Account</h2>
+                <p class="subtitle">Secure Shield Encryption Platform</p>
+
+                <div id="registerAlert" class="alert alert-danger" style="display: none;"></div>
+
+                <form id="registerForm" onsubmit="handleRegisterSubmit(event)">
+                    <div class="form-group">
+                        <label for="reg-username">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="reg-username" class="form-input" placeholder="Choose a username" required autocomplete="username">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="reg-password" class="form-input" placeholder="Create strong password (min 6 chars)" required autocomplete="new-password">
+                            <i class="fa-solid fa-lock"></i>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('reg-password')">
+                                <i class="fa-solid fa-eye" id="reg-password-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-confirm-password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="reg-confirm-password" class="form-input" placeholder="Re-enter password" required autocomplete="new-password">
+                            <i class="fa-solid fa-lock-open"></i>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('reg-confirm-password')">
+                                <i class="fa-solid fa-eye" id="reg-confirm-password-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btnSignUp">
+                        <i class="fa-solid fa-user-check"></i> Sign Up
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    Already have an account? <a href="javascript:void(0)" onclick="showAuthScreen('login')">Sign in here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= DASHBOARD VIEW ================= -->
+    <div id="dashboardView" class="view-section">
+        <div class="dashboard-wrapper">
+            <!-- Sidebar (Desktop) / Sticky Header (Mobile) -->
+            <aside class="sidebar">
+                <div class="sidebar-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Secure Shield</span>
+                </div>
+
+                <!-- Desktop Navigation Menu -->
+                <div class="sidebar-nav-container">
+                    <ul class="nav-menu">
+                        <li class="nav-item active" data-tab="encrypt">
+                            <button onclick="switchTab('encrypt')">
+                                <i class="fa-solid fa-lock"></i>
+                                <span>Encrypt</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" data-tab="decrypt">
+                            <button onclick="switchTab('decrypt')">
+                                <i class="fa-solid fa-lock-open"></i>
+                                <span>Decrypt</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" data-tab="messages">
+                            <button onclick="switchTab('messages')">
+                                <i class="fa-solid fa-box-archive"></i>
+                                <span>Saved Messages</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" data-tab="profile">
+                            <button onclick="switchTab('profile')">
+                                <i class="fa-solid fa-circle-user"></i>
+                                <span>Security Profile</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-footer">
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <div class="username" id="userNameLabel">User</div>
+                    </div>
+                    <button type="button" class="btn-logout" onclick="handleLogout()" title="Log Out">
+                        <i class="fa-solid fa-power-off"></i>
+                        <span>Log Out</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Mobile Bottom Navigation Bar -->
+            <ul class="mobile-nav">
+                <li class="mobile-nav-item active" data-tab-mob="encrypt">
+                    <button onclick="switchTab('encrypt')">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Encrypt</span>
+                    </button>
+                </li>
+                <li class="mobile-nav-item" data-tab-mob="decrypt">
+                    <button onclick="switchTab('decrypt')">
+                        <i class="fa-solid fa-lock-open"></i>
+                        <span>Decrypt</span>
+                    </button>
+                </li>
+                <li class="mobile-nav-item" data-tab-mob="messages">
+                    <button onclick="switchTab('messages')">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <span>Saved</span>
+                    </button>
+                </li>
+                <li class="mobile-nav-item" data-tab-mob="profile">
+                    <button onclick="switchTab('profile')">
+                        <i class="fa-solid fa-user-lock"></i>
+                        <span>Profile</span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- ENCRYPT TAB -->
+                <section id="encrypt-tab" class="tab-content active">
+                    <header class="content-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h1>Encrypt Message</h1>
+                                <p>Hardware-accelerated AES-256-GCM authenticated encryption.</p>
+                            </div>
+                            <div>
+                                <a href="SecureShield-v1.0.apk" download class="btn-apk-download">
+                                    <i class="fa-brands fa-android"></i> Get Android APK
+                                </a>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="content-grid">
+                        <!-- Encryption Form -->
+                        <div class="dashboard-card glass-container">
+                            <h3><i class="fa-solid fa-key"></i> Encryption Parameters</h3>
+                            <form id="encryptForm" onsubmit="handleEncrypt(event)">
+                                <div class="form-group">
+                                    <label for="enc-title">Message Title</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="enc-title" class="form-input form-input-no-icon" placeholder="e.g., Bank Credentials, Confidential Note" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="enc-message">Plaintext Message</label>
+                                    <textarea id="enc-message" class="form-input" placeholder="Type your confidential message here..." required></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="enc-password">Encryption Password</label>
+                                    <div class="input-wrapper">
+                                        <input type="password" id="enc-password" class="form-input" placeholder="Enter custom password" required autocomplete="new-password">
+                                        <i class="fa-solid fa-shield-cat"></i>
+                                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('enc-password')">
+                                            <i class="fa-solid fa-eye" id="enc-password-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="enc-key">Secret Key</label>
+                                    <div class="key-gen-group">
+                                        <div class="input-wrapper" style="flex-grow: 1;">
+                                            <input type="text" id="enc-key" class="form-input" placeholder="Enter or generate key" required>
+                                            <i class="fa-solid fa-key"></i>
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-action-sm" onclick="generateSecretKey('enc-key')">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="btnEncrypt">
+                                    <i class="fa-solid fa-lock"></i> Encrypt &amp; Save
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Encryption Output Card -->
+                        <div class="dashboard-card glass-container output-card">
+                            <h3><i class="fa-solid fa-circle-nodes"></i> Encrypted Payload</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                                Encrypted using AES-256-GCM. Stored in local database. You can copy the payload below to send or backup.
+                            </p>
+
+                            <div class="form-group">
+                                <label>Ciphertext (Combined Base64)</label>
+                                <div class="output-value-container">
+                                    <div id="out-ciphertext" class="output-value">-- Pending Input --</div>
+                                    <button type="button" class="btn-copy" onclick="copyText('out-ciphertext', 'Ciphertext')" title="Copy Ciphertext">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Authentication Tag (16 Bytes Base64)</label>
+                                <div class="output-value-container">
+                                    <div id="out-tag" class="output-value" style="min-height: 50px;">--</div>
+                                    <button type="button" class="btn-copy" onclick="copyText('out-tag', 'Auth Tag')" title="Copy Tag">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DECRYPT TAB -->
+                <section id="decrypt-tab" class="tab-content">
+                    <header class="content-header">
+                        <h1>Decrypt Payload</h1>
+                        <p>Authenticate and decrypt raw ciphertext payloads.</p>
+                    </header>
+
+                    <div class="content-grid content-grid-single">
+                        <div class="dashboard-card glass-container">
+                            <h3><i class="fa-solid fa-unlock-keyhole"></i> Decryption Form</h3>
+
+                            <form id="decryptForm" onsubmit="handleDecryptRaw(event)">
+                                <div class="form-group">
+                                    <label for="dec-ciphertext">Ciphertext (Base64)</label>
+                                    <textarea id="dec-ciphertext" class="form-input form-input-no-icon" placeholder="Paste base64 ciphertext" required style="min-height: 80px;"></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dec-tag">Auth Tag (Base64)</label>
+                                    <input type="text" id="dec-tag" class="form-input form-input-no-icon" placeholder="Paste base64 authentication tag" required autocomplete="one-time-code">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="dec-password">Decryption Password</label>
+                                        <div class="input-wrapper">
+                                            <input type="password" id="dec-password" class="form-input" placeholder="Enter password" required autocomplete="new-password">
+                                            <i class="fa-solid fa-lock"></i>
+                                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('dec-password')">
+                                                <i class="fa-solid fa-eye" id="dec-password-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="dec-key">Secret Key</label>
+                                        <div class="input-wrapper">
+                                            <input type="text" id="dec-key" class="form-input" placeholder="Enter secret key" required>
+                                            <i class="fa-solid fa-key"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                                    <i class="fa-solid fa-unlock"></i> Authenticate &amp; Decrypt
+                                </button>
+                            </form>
+
+                            <div style="margin-top: 30px;">
+                                <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">Decrypted Plaintext Output</label>
+                                <div class="output-value-container" style="margin-top: 8px;">
+                                    <div id="dec-output" class="output-value" style="min-height: 100px; font-family: var(--font-main); color: var(--text-primary); font-size: 16px;">
+                                        -- Decrypted message will appear here --
+                                    </div>
+                                    <button type="button" class="btn-copy" onclick="copyText('dec-output', 'Plaintext')" title="Copy Plaintext">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SAVED MESSAGES TAB -->
+                <section id="messages-tab" class="tab-content">
+                    <header class="content-header">
+                        <h1>Saved Messages</h1>
+                        <p>Encrypted records stored securely in your browser/device database.</p>
+                    </header>
+
+                    <div class="dashboard-card glass-container">
+                        <div id="messages-container" class="message-list">
+                            <div class="no-messages">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                <p style="margin-top: 10px;">Loading saved messages...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECURITY PROFILE TAB -->
+                <section id="profile-tab" class="tab-content">
+                    <header class="content-header">
+                        <h1>Security Profile</h1>
+                        <p>Cryptographic parameters and environment diagnostics.</p>
+                    </header>
+
+                    <div class="profile-card glass-container">
+                        <div class="profile-header">
+                            <div class="profile-avatar" id="profileAvatar">U</div>
+                            <div class="profile-info">
+                                <h2 id="profileUsername">User</h2>
+                                <p><i class="fa-solid fa-circle-check" style="color: var(--color-success);"></i> Authenticated Locally</p>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Active Encryption Standard</span>
+                            <span class="info-value" style="color: var(--color-accent-2);">AES-256-GCM (128-bit Tag)</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Key Derivation Function</span>
+                            <span class="info-value">PBKDF2-HMAC-SHA256 (100,000 Iterations)</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Database Engine</span>
+                            <span class="info-value">Encrypted Local Database (Browser / SQLite)</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Deployment Platform</span>
+                            <span class="info-value" id="profileDevice">Web Browser / GitHub Pages</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Android Mobile App</span>
+                            <span class="info-value">
+                                <a href="SecureShield-v1.0.apk" download style="color: #10b981; font-weight: 600; text-decoration: underline;">
+                                    <i class="fa-brands fa-android"></i> Download SecureShield-v1.0.apk
+                                </a>
+                            </span>
+                        </div>
+
+                        <div style="margin-top: 30px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                            <h4 style="color: var(--text-primary); margin-bottom: 10px;"><i class="fa-solid fa-circle-info" style="color: var(--color-accent-1)"></i> Cryptographic Assurance</h4>
+                            <p>
+                                Your messages are encrypted using authenticated Galois/Counter Mode (GCM). An authentication tag protects against unauthorized tampering. The derived AES key requires both your Password and Secret Key with 100,000 rounds of PBKDF2 hashing.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+
+    <!-- ================= DECRYPT MODAL ================= -->
+    <div id="decrypt-modal" class="modal">
+        <div class="modal-card glass-container">
+            <div class="modal-header">
+                <h3 id="modal-msg-title">Decrypt Saved Message</h3>
+                <button type="button" class="btn-close" onclick="closeDecryptModal()">&times;</button>
+            </div>
+
+            <form id="modal-decrypt-form" onsubmit="handleModalDecrypt(event)">
+                <input type="hidden" id="modal-msg-id">
+
+                <div class="form-group">
+                    <label for="modal-password">Decryption Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="modal-password" class="form-input" placeholder="Enter password" required autocomplete="new-password">
+                        <i class="fa-solid fa-lock"></i>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('modal-password')">
+                            <i class="fa-solid fa-eye" id="modal-password-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-key">Secret Key</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="modal-key" class="form-input" placeholder="Enter secret key" required>
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                    <i class="fa-solid fa-unlock-keyhole"></i> Decrypt Contents
+                </button>
+            </form>
+
+            <div id="modal-output-container" style="display: none; margin-top: 25px;">
+                <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">Decrypted Plaintext</label>
+                <div class="output-value-container" style="margin-top: 8px;">
+                    <div id="modal-decrypted-text" class="modal-decrypted-box"></div>
+                    <button type="button" class="btn-copy" onclick="copyText('modal-decrypted-text', 'Plaintext')" title="Copy Plaintext">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="js/app.js"></script>
+</body>
+</html>

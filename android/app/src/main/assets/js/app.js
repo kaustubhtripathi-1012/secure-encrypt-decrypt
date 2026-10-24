@@ -1,19 +1,212 @@
-// Secure Shield Android Application Controller
+// Secure Shield Application Controller (Web & Android Standalone)
 
 let currentUser = null;
 
-// Utility: Check if running inside Android APK
 function hasAndroidBridge() {
     return typeof window.AndroidBridge !== 'undefined';
 }
 
-// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     checkCurrentUser();
     initPlatformDiagnostics();
 });
 
-// Check if user is already logged in
+// --- BASE64 & BYTE UTILITIES ---
+
+function bufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+function base64ToBuffer(base64) {
+    const binary = window.atob(base64.trim());
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function concatBuffers(...buffers) {
+    const totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const b of buffers) {
+        result.set(b, offset);
+        offset += b.length;
+    }
+    return result;
+}
+
+// --- WEBCRYPTO IMPLEMENTATION (BROWSER MODE) ---
+
+async function deriveWebCryptoKey(password, secretKey, saltBytes, usage = ['encrypt', 'decrypt']) {
+    const enc = new TextEncoder();
+    const combinedKey = `${password}${secretKey}`;
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(combinedKey),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    return await window.crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: saltBytes,
+            iterations: 100000,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        usage
+    );
+}
+
+async function webCryptoEncrypt(message, password, secretKey) {
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const nonce = window.crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveWebCryptoKey(password, secretKey, salt, ['encrypt']);
+
+    const enc = new TextEncoder();
+    const encryptedBuf = await window.crypto.subtle.encrypt(
+        {
+            name: 'AES-GCM',
+            iv: nonce,
+            tagLength: 128
+        },
+        key,
+        enc.encode(message)
+    );
+
+    const encryptedArray = new Uint8Array(encryptedBuf);
+    const ciphertextBytes = encryptedArray.slice(0, encryptedArray.length - 16);
+    const tagBytes = encryptedArray.slice(encryptedArray.length - 16);
+    const combinedBytes = concatBuffers(salt, nonce, ciphertextBytes);
+
+    return {
+        ciphertext: bufferToBase64(ciphertextBytes),
+        nonce: bufferToBase64(nonce),
+        tag: bufferToBase64(tagBytes),
+        salt: bufferToBase64(salt),
+        combined_ciphertext: bufferToBase64(combinedBytes)
+    };
+}
+
+async function webCryptoDecrypt(ciphertextB64, nonceB64, tagB64, saltB64, password, secretKey) {
+    try {
+        let salt, nonce, ciphertext;
+
+        if (!nonceB64 || !saltB64) {
+            const combined = base64ToBuffer(ciphertextB64);
+            if (combined.length < 28) return null;
+            salt = combined.slice(0, 16);
+            nonce = combined.slice(16, 28);
+            ciphertext = combined.slice(28);
+        } else {
+            salt = base64ToBuffer(saltB64);
+            nonce = base64ToBuffer(nonceB64);
+            ciphertext = base64ToBuffer(ciphertextB64);
+        }
+
+        const tag = base64ToBuffer(tagB64);
+        const key = await deriveWebCryptoKey(password, secretKey, salt, ['decrypt']);
+
+        const toDecrypt = concatBuffers(ciphertext, tag);
+        const decryptedBuf = await window.crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: nonce,
+                tagLength: 128
+            },
+            key,
+            toDecrypt
+        );
+
+        return new TextDecoder().decode(decryptedBuf);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Web password hashing (PBKDF2)
+async function hashPasswordWeb(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    );
+    const derivedBits = await window.crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: 20000,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+    );
+    return bufferToBase64(derivedBits);
+}
+
+// --- LOCAL STORAGE DATABASE FOR WEB BROWSERS ---
+
+function getWebUsers() {
+    try {
+        return JSON.parse(localStorage.getItem('secureshield_users') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveWebUsers(users) {
+    localStorage.setItem('secureshield_users', JSON.stringify(users));
+}
+
+function getWebMessages(userId) {
+    try {
+        const all = JSON.parse(localStorage.getItem('secureshield_messages') || '[]');
+        return all.filter(m => m.user_id === userId);
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveWebMessage(userId, title, ciphertext, nonce, tag, salt) {
+    const all = JSON.parse(localStorage.getItem('secureshield_messages') || '[]');
+    const newMsg = {
+        id: Date.now(),
+        user_id: userId,
+        title: title.trim(),
+        ciphertext,
+        nonce,
+        tag,
+        salt,
+        created_at: new Date().toLocaleString()
+    };
+    all.unshift(newMsg);
+    localStorage.setItem('secureshield_messages', JSON.stringify(all));
+    return true;
+}
+
+function deleteWebMessage(msgId, userId) {
+    const all = JSON.parse(localStorage.getItem('secureshield_messages') || '[]');
+    const filtered = all.filter(m => !(m.id === msgId && m.user_id === userId));
+    localStorage.setItem('secureshield_messages', JSON.stringify(filtered));
+    return true;
+}
+
+// --- SESSION MANAGEMENT ---
+
 function checkCurrentUser() {
     if (hasAndroidBridge()) {
         try {
@@ -25,20 +218,36 @@ function checkCurrentUser() {
         } catch (e) {
             console.error("Failed to parse user from AndroidBridge:", e);
         }
+    } else {
+        const session = localStorage.getItem('secureshield_session');
+        if (session) {
+            try {
+                const user = JSON.parse(session);
+                onUserLoggedIn(user);
+                return;
+            } catch (e) {}
+        }
     }
     showAuthView();
 }
 
 function initPlatformDiagnostics() {
+    const devElem = document.getElementById('profileDevice');
+    const badgeElem = document.getElementById('platformBadge');
+    
     if (hasAndroidBridge()) {
         try {
             const info = JSON.parse(window.AndroidBridge.getPlatformInfo());
-            const devElem = document.getElementById('profileDevice');
             if (devElem && info.deviceModel) {
                 devElem.innerText = `${info.deviceModel} (Android ${info.osVersion})`;
             }
-        } catch (e) {
-            console.error("Failed to get platform info:", e);
+        } catch (e) {}
+    } else {
+        if (devElem) {
+            devElem.innerText = navigator.userAgent.split('(')[1]?.split(')')[0] || 'Web Browser (GitHub Pages)';
+        }
+        if (badgeElem) {
+            badgeElem.innerText = 'GitHub Pages Web Edition';
         }
     }
 }
@@ -89,7 +298,7 @@ function onUserLoggedIn(user) {
 
 // --- AUTH ACTIONS ---
 
-function handleLoginSubmit(event) {
+async function handleLoginSubmit(event) {
     event.preventDefault();
     const alertBox = document.getElementById('loginAlert');
     const btn = document.getElementById('btnSignIn');
@@ -122,13 +331,33 @@ function handleLoginSubmit(event) {
             alertBox.style.display = 'flex';
         }
     } else {
-        // Fallback for browser preview
-        btn.disabled = false;
-        onUserLoggedIn({ id: 1, username: username });
+        // Web Browser Authentication via LocalStorage
+        try {
+            const users = getWebUsers();
+            const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+            if (found) {
+                const salt = base64ToBuffer(found.salt);
+                const computedHash = await hashPasswordWeb(password, salt);
+                if (computedHash === found.hash) {
+                    btn.disabled = false;
+                    const sessionUser = { id: found.id, username: found.username };
+                    localStorage.setItem('secureshield_session', JSON.stringify(sessionUser));
+                    onUserLoggedIn(sessionUser);
+                    return;
+                }
+            }
+            btn.disabled = false;
+            alertBox.innerText = 'Invalid username or password.';
+            alertBox.style.display = 'flex';
+        } catch (e) {
+            btn.disabled = false;
+            alertBox.innerText = 'Authentication error: ' + e.message;
+            alertBox.style.display = 'flex';
+        }
     }
 }
 
-function handleRegisterSubmit(event) {
+async function handleRegisterSubmit(event) {
     event.preventDefault();
     const alertBox = document.getElementById('registerAlert');
     const btn = document.getElementById('btnSignUp');
@@ -163,11 +392,7 @@ function handleRegisterSubmit(event) {
             const res = JSON.parse(window.AndroidBridge.register(username, password, confirmPassword));
             btn.disabled = false;
             if (res.success) {
-                if (window.AndroidBridge.showToast) {
-                    window.AndroidBridge.showToast("Account created successfully! Please sign in.");
-                } else {
-                    alert("Account created successfully! Please sign in.");
-                }
+                alert("Account created successfully! Please sign in.");
                 showAuthScreen('login');
                 document.getElementById('login-username').value = username;
             } else {
@@ -180,9 +405,36 @@ function handleRegisterSubmit(event) {
             alertBox.style.display = 'flex';
         }
     } else {
-        btn.disabled = false;
-        alert("Registration simulated (Browser Mode).");
-        showAuthScreen('login');
+        // Web Browser Registration
+        try {
+            const users = getWebUsers();
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                btn.disabled = false;
+                alertBox.innerText = 'Username is already taken.';
+                alertBox.style.display = 'flex';
+                return;
+            }
+
+            const salt = window.crypto.getRandomValues(new Uint8Array(16));
+            const hash = await hashPasswordWeb(password, salt);
+
+            users.push({
+                id: Date.now(),
+                username: username,
+                hash: hash,
+                salt: bufferToBase64(salt)
+            });
+            saveWebUsers(users);
+
+            btn.disabled = false;
+            alert("Account created successfully! Please log in.");
+            showAuthScreen('login');
+            document.getElementById('login-username').value = username;
+        } catch (e) {
+            btn.disabled = false;
+            alertBox.innerText = 'Failed to create account: ' + e.message;
+            alertBox.style.display = 'flex';
+        }
     }
 }
 
@@ -190,6 +442,8 @@ function handleLogout() {
     if (confirm("Are you sure you want to log out?")) {
         if (hasAndroidBridge()) {
             window.AndroidBridge.logout();
+        } else {
+            localStorage.removeItem('secureshield_session');
         }
         currentUser = null;
         document.getElementById('login-password').value = '';
@@ -226,7 +480,6 @@ function switchTab(tabId) {
     }
 }
 
-// Password Visibility Toggle
 function togglePasswordVisibility(fieldId) {
     const input = document.getElementById(fieldId);
     const eye = document.getElementById(`${fieldId}-eye`);
@@ -239,7 +492,6 @@ function togglePasswordVisibility(fieldId) {
     }
 }
 
-// Generate Random Secret Key
 function generateSecretKey(inputId) {
     if (hasAndroidBridge()) {
         const hex = window.AndroidBridge.generateSecretKey();
@@ -252,7 +504,6 @@ function generateSecretKey(inputId) {
     }
 }
 
-// Copy to Clipboard with Feedback
 function copyText(elementId, label) {
     const element = document.getElementById(elementId);
     const text = element.innerText || element.value;
@@ -283,7 +534,7 @@ function copyText(elementId, label) {
 
 // --- CRYPTO OPERATIONS ---
 
-function handleEncrypt(event) {
+async function handleEncrypt(event) {
     event.preventDefault();
     const btn = document.getElementById('btnEncrypt');
     const title = document.getElementById('enc-title').value.trim();
@@ -309,11 +560,7 @@ function handleEncrypt(event) {
                 document.getElementById('enc-title').value = '';
                 document.getElementById('enc-message').value = '';
 
-                if (window.AndroidBridge.showToast) {
-                    window.AndroidBridge.showToast("Message encrypted and saved to SQLite!");
-                } else {
-                    alert("Message encrypted and saved successfully!");
-                }
+                alert("Message encrypted and saved to SQLite!");
             } else {
                 alert("Encryption failed: " + (res.error || "Unknown error"));
             }
@@ -322,12 +569,27 @@ function handleEncrypt(event) {
             alert("Encryption error: " + e.message);
         }
     } else {
-        btn.disabled = false;
-        alert("Running in browser demo mode.");
+        // Web Browser Mode via WebCrypto
+        try {
+            const enc = await webCryptoEncrypt(message, password, secretKey);
+            saveWebMessage(currentUser.id, title, enc.ciphertext, enc.nonce, enc.tag, enc.salt);
+
+            btn.disabled = false;
+            document.getElementById('out-ciphertext').innerText = enc.combined_ciphertext;
+            document.getElementById('out-tag').innerText = enc.tag;
+
+            document.getElementById('enc-title').value = '';
+            document.getElementById('enc-message').value = '';
+
+            alert("Message encrypted and saved to browser storage!");
+        } catch (e) {
+            btn.disabled = false;
+            alert("Encryption error: " + e.message);
+        }
     }
 }
 
-function handleDecryptRaw(event) {
+async function handleDecryptRaw(event) {
     event.preventDefault();
     const ciphertext = document.getElementById('dec-ciphertext').value.trim();
     const tag = document.getElementById('dec-tag').value.trim();
@@ -352,6 +614,21 @@ function handleDecryptRaw(event) {
             outBox.innerText = 'Decryption failed: ' + e.message;
             outBox.classList.add('error-out');
         }
+    } else {
+        // Web Browser Mode via WebCrypto
+        try {
+            const decrypted = await webCryptoDecrypt(ciphertext, null, tag, null, password, secretKey);
+            if (decrypted !== null) {
+                outBox.innerText = decrypted;
+                outBox.classList.remove('error-out');
+            } else {
+                outBox.innerText = 'Authentication Failed: Incorrect Password or Secret Key.';
+                outBox.classList.add('error-out');
+            }
+        } catch (e) {
+            outBox.innerText = 'Decryption error: ' + e.message;
+            outBox.classList.add('error-out');
+        }
     }
 }
 
@@ -362,7 +639,7 @@ function loadMessages() {
     container.innerHTML = `
         <div class="no-messages">
             <i class="fa-solid fa-spinner fa-spin"></i>
-            <p style="margin-top: 10px;">Loading saved messages from SQLite...</p>
+            <p style="margin-top: 10px;">Loading saved messages...</p>
         </div>
     `;
 
@@ -370,58 +647,56 @@ function loadMessages() {
         try {
             const res = JSON.parse(window.AndroidBridge.getMessages());
             if (res.success) {
-                if (!res.messages || res.messages.length === 0) {
-                    container.innerHTML = `
-                        <div class="no-messages">
-                            <i class="fa-solid fa-box-open"></i>
-                            <p style="margin-top: 15px;">No saved messages. Head over to the Encrypt tab to create one!</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = '';
-                res.messages.forEach(msg => {
-                    const item = document.createElement('div');
-                    item.className = 'message-item glass-container';
-                    item.innerHTML = `
-                        <div class="message-info">
-                            <div class="message-icon">
-                                <i class="fa-solid fa-envelope-shield"></i>
-                            </div>
-                            <div class="message-meta">
-                                <h4>${escapeHtml(msg.title)}</h4>
-                                <span>Saved: ${escapeHtml(msg.created_at)}</span>
-                            </div>
-                        </div>
-                        <div class="message-actions">
-                            <button class="btn-icon btn-icon-decrypt" onclick="openDecryptModal(${msg.id}, '${escapeJsString(msg.title)}')" title="Decrypt Message">
-                                <i class="fa-solid fa-unlock-keyhole"></i>
-                            </button>
-                            <button class="btn-icon btn-icon-delete" onclick="handleDeleteMessage(${msg.id})" title="Delete Message">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(item);
-                });
+                renderMessageList(res.messages, container);
             } else {
-                container.innerHTML = `
-                    <div class="no-messages">
-                        <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-error)"></i>
-                        <p style="margin-top: 15px; color: var(--color-error)">Failed to load messages: ${res.error}</p>
-                    </div>
-                `;
+                container.innerHTML = `<p style="color:var(--color-error)">Failed: ${res.error}</p>`;
             }
         } catch (e) {
-            container.innerHTML = `
-                <div class="no-messages">
-                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-error)"></i>
-                    <p style="margin-top: 15px; color: var(--color-error)">Error loading messages: ${e.message}</p>
-                </div>
-            `;
+            container.innerHTML = `<p style="color:var(--color-error)">Error: ${e.message}</p>`;
         }
+    } else {
+        // Web Browser Mode
+        const messages = getWebMessages(currentUser.id);
+        renderMessageList(messages, container);
     }
+}
+
+function renderMessageList(messages, container) {
+    if (!messages || messages.length === 0) {
+        container.innerHTML = `
+            <div class="no-messages">
+                <i class="fa-solid fa-box-open"></i>
+                <p style="margin-top: 15px;">No saved messages. Head over to the Encrypt tab to create one!</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    messages.forEach(msg => {
+        const item = document.createElement('div');
+        item.className = 'message-item glass-container';
+        item.innerHTML = `
+            <div class="message-info">
+                <div class="message-icon">
+                    <i class="fa-solid fa-envelope-shield"></i>
+                </div>
+                <div class="message-meta">
+                    <h4>${escapeHtml(msg.title)}</h4>
+                    <span>Saved: ${escapeHtml(msg.created_at)}</span>
+                </div>
+            </div>
+            <div class="message-actions">
+                <button class="btn-icon btn-icon-decrypt" onclick="openDecryptModal(${msg.id}, '${escapeJsString(msg.title)}')" title="Decrypt Message">
+                    <i class="fa-solid fa-unlock-keyhole"></i>
+                </button>
+                <button class="btn-icon btn-icon-delete" onclick="handleDeleteMessage(${msg.id})" title="Delete Message">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(item);
+    });
 }
 
 // Modal Decryption
@@ -444,7 +719,7 @@ function closeDecryptModal() {
     document.getElementById('decrypt-modal').classList.remove('active');
 }
 
-function handleModalDecrypt(event) {
+async function handleModalDecrypt(event) {
     event.preventDefault();
     const msgId = document.getElementById('modal-msg-id').value;
     const password = document.getElementById('modal-password').value;
@@ -471,40 +746,61 @@ function handleModalDecrypt(event) {
             outBox.innerText = 'Decryption error: ' + e.message;
             outBox.style.color = 'var(--color-error)';
         }
+    } else {
+        // Web Browser Mode
+        try {
+            const all = getWebMessages(currentUser.id);
+            const msg = all.find(m => m.id === parseInt(msgId));
+            if (!msg) {
+                outBox.innerText = 'Message not found.';
+                outBox.style.color = 'var(--color-error)';
+                return;
+            }
+
+            const decrypted = await webCryptoDecrypt(
+                msg.ciphertext,
+                msg.nonce,
+                msg.tag,
+                msg.salt,
+                password,
+                secretKey
+            );
+
+            if (decrypted !== null) {
+                outBox.innerText = decrypted;
+                outBox.style.color = 'var(--text-primary)';
+            } else {
+                outBox.innerText = 'Authentication Failed: Incorrect Password or Secret Key.';
+                outBox.style.color = 'var(--color-error)';
+            }
+        } catch (e) {
+            outBox.innerText = 'Decryption error: ' + e.message;
+            outBox.style.color = 'var(--color-error)';
+        }
     }
 }
 
 function handleDeleteMessage(msgId) {
-    if (confirm("Are you sure you want to permanently delete this encrypted message from SQLite?")) {
+    if (confirm("Are you sure you want to permanently delete this encrypted message?")) {
         if (hasAndroidBridge()) {
             try {
                 const res = JSON.parse(window.AndroidBridge.deleteMessage(parseInt(msgId)));
                 if (res.success) {
                     loadMessages();
-                    if (window.AndroidBridge.showToast) {
-                        window.AndroidBridge.showToast("Message deleted.");
-                    }
                 } else {
                     alert("Delete failed: " + res.error);
                 }
             } catch (e) {
                 alert("Error deleting message: " + e.message);
             }
+        } else {
+            deleteWebMessage(parseInt(msgId), currentUser.id);
+            loadMessages();
         }
     }
 }
 
-// Hardware Back Button Handler
-window.handleAndroidBackPress = function() {
-    const modal = document.getElementById('decrypt-modal');
-    if (modal && modal.classList.contains('active')) {
-        closeDecryptModal();
-        return "true";
-    }
-    return "false";
-};
-
-// String escaping utilities
+// Escape functions
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
